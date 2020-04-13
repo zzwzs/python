@@ -1,0 +1,77 @@
+import sqlite3,sys
+#the input function permits entry of command line parameters
+#accept the genre list
+#genre_input = input("Enter the genre list seperated by & and with no spaces: ")
+
+while True:
+    genre_input = input("Enter the genre list seperated by & and with no space in between: ")
+    genre_count=genre_input.count("&") + 1
+    if genre_count>8 :
+        print("Genre list should not exceed 8.")
+    else:
+        break
+
+genre_sql = ''
+#do this if a genre arguement is actually supplied
+if genre_input:
+   
+   genre_sql='instr("'+genre_input+'", genre)>0'
+#do this in case the genre arguemnt is not supplied
+if not genre_input:  
+     genre_sql = '1 = 1'
+#accept arguements for output limit only if the value is greater than or equal to 1
+while True:
+    result_limit = int(input("Enter a result limit count:"))
+    if result_limit<1 or result_limit>1000 :
+        print("Not an appropriate choice.")
+    else:
+        break
+#accept arguement for the start year if the value is greater or equal to 1900
+while True:
+    start_year = int(input("Enter the start year:"))
+    if start_year<1900 :
+        print("Not an appropriate choice.")
+    else:
+        break
+#accept the end year if it is less than or equal to 2020
+while True:
+    end_year = int(input("Enter the end year:"))
+    if start_year>2020 :
+        print("Not an appropriate choice.")
+    else:
+        break        
+#this function adds auto numbers to the result set retrieved from the SQLite rows
+def incrementor():
+    info = {"count": 0}
+    def number():
+        info["count"] += 1
+        return info["count"]
+    return number
+
+number = incrementor()
+
+#genre=(genre_list,)
+lower_year=(start_year,)
+upper_year=(end_year,)
+output_limit=(result_limit,)
+conn = sqlite3.connect('a2.db')
+#run the SQL statement
+params = (start_year,end_year,result_limit)
+cursor = conn.execute('SELECT m.title,year,content_rating,lang,imdb_score,num_voted_users \
+         from movie m JOIN rating r ON m.id=r.movie_id \
+         JOIN genre gn on gn.movie_id=m.id \
+         WHERE \
+         year between ? and ? and \
+         year IS NOT NULL and '\
+         +genre_sql+ '\
+         ORDER BY imdb_score,num_voted_users desc limit ? \
+         ', params)
+for row in cursor:
+      #print(row)
+      print(str(number())+". "+row[0]+" ("+str(row[1])+ ", "+str(row[2])+ ", "+row[3]+") "+ " [" +str(row[4])+", "+str(row[5])+"]")
+#close the cursor
+cursor.close()
+#close the SQLite database connection
+conn.close()
+
+

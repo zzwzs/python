@@ -1,0 +1,37 @@
+import sqlite3,sys
+#the input function permits entry of command line parameters
+movie_title = input("Enter the movie title: ")
+#the function below converts the supplied input to upper case
+#for use later (in conjuction with SQLite's native upper function) to permit case insenstive reads
+temp_title=movie_title.upper()
+#cast the entered input as a string passable to the SQL query statement
+#actor=(temp_title,)
+#this function adds auto numbers to the result set retrieved from the SQLite rows
+def incrementor():
+    info = {"count": 0}
+    def number():
+        info["count"] += 1
+        return info["count"]
+    return number
+
+number = incrementor()
+#load the supplied database file
+conn = sqlite3.connect('a2.db')
+#run the SQL statement
+cursor = conn.execute("SELECT title,year,content_rating,imdb_score, GROUP_CONCAT(genre) as genre \
+         FROM ( \
+         select m.id as movie_id,m.title,year,content_rating,imdb_score,genre \
+         from movie m JOIN rating r ON m.id=r.movie_id \
+         JOIN genre gn on gn.movie_id=m.id \
+         WHERE upper(m.title) LIKE ? \
+         ORDER by year asc,imdb_score desc, title asc \
+         )GROUP BY title ", ('%'+temp_title+'%',))
+
+         
+for row in cursor:
+      #print(row)
+      print(str(number())+". "+str(row[0])+" ("+str(row[1]) + ", "+str(row[2])+ ", "+str(row[3])+") ["+ str(row[4]) +"]")
+#close the cursor
+cursor.close()
+#close the SQLite database connection
+conn.close()
