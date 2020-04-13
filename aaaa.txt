@@ -1,0 +1,59 @@
+import sqlite3,sys
+#the input function permits entry of command line parameters
+#accept the genre list
+movie_title = input("Enter the full movie name: ")
+temp_title=movie_title.upper()
+#accept arguements for output limit only if the value is greater than or equal to 1
+while True:
+    result_limit = int(input("Enter a result limit count:"))
+    if result_limit<1 or result_limit>1000 :
+        print("Not an appropriate choice.")
+    else:
+        break
+
+#this function adds auto numbers to the result set retrieved from the SQLite rows
+def incrementor():
+    info = {"count": 0}
+    def number():
+        info["count"] += 1
+        return info["count"]
+    return number
+
+number = incrementor()
+#load the supplied database file
+conn = sqlite3.connect('a2.db')
+# a couple of temporary tables go here
+cursor1 = conn.execute("create temporary table movies_sharing_genre as \
+         select * from genre where genre in ( \
+         select genre from genre \
+         group by genre having count(1) > 1) \
+         ")
+params = (temp_title,temp_title,result_limit)         
+cursor2 = conn.execute("create temporary table contextual_common_genre as \
+          select movie_id,COUNT(genre) as common_genres \
+          from movies_sharing_genre where genre IN \
+          (select genre from genre WHERE movie_id=(select id from movie WHERE upper(title) = ?)) \
+          AND movie_id<>(select id from movie WHERE upper(title) = ?) \
+          GROUP BY movie_id order by COUNT(genre) desc limit ? \
+           ", params)
+cursor3 = conn.execute("create temporary table keyword_maximum as \
+          select movie_id,MAX(length(keyword)) as max_keyword from keyword \
+          GROUP BY movie_id")
+curr = conn.execute("select m.title,m.year,num_voted_users,imdb_score,max_keyword,common_genres \
+       from movie m JOIN rating r ON m.id=r.movie_id \
+       JOIN keyword_maximum km ON km.movie_id=m.id \
+       JOIN contextual_common_genre ccg ON ccg.movie_id=m.id \
+       WHERE m.id IN (select movie_id from contextual_common_genre) \
+       ")   
+
+for row in curr:
+      #print(row)
+      print(str(number())+". "+row[0]+" ("+str(row[1])+ ") ["+str(row[5])+ ", "+str(row[4])+", "+ str(row[3])+", "+str(row[2])+"]")
+#close the cursor
+curr.close()
+#close the SQLite database connection
+conn.close()              
+          
+          
+        
+         
